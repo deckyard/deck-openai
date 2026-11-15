@@ -1,0 +1,33 @@
+# Grimoire book configuration for the @deckyard/openai documentation.
+
+[book]
+title = "@deckyard/openai"
+description = "A client for OpenAI-compatible APIs (OpenAI, Ollama, vLLM, OpenRouter, Azure): chat with tools and structured output, embeddings, models"
+language = "en"
+src = "docs"
+
+[build]
+out = "site"
+clean = true
+jobs = 0
+
+[html]
+theme = "nordic"
+mode = "auto"
+navPosition = "left"
+tocPosition = "right"
+tocDepth = 3
+sectionNumbers = true
+titleUrl = "https://deckyard.github.io/deck-openai/"
+repoUrl = "https://github.com/deckyard/deck-openai"
+repoLabel = "Source"
+editUrl = "https://github.com/deckyard/deck-openai/edit/main/docs/{path}"
+
+[highlight]
+enabled = true
+
+[search]
+enabled = true
+
+[pdf]
+enabled = false

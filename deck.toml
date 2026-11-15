@@ -1,0 +1,17 @@
+[package]
+name = "@deckyard/openai"
+version = "0.1.0"
+description = "A client for OpenAI-compatible APIs (OpenAI, Ollama, vLLM, OpenRouter, Azure): chat with tools and structured output, embeddings, models"
+license = "LGPL-3.0-only"
+authors = ["mplx <mplx@jennifer-lang.dev>"]
+# It talks to the vendor's HTTPS API, so it opens sockets.
+capabilities = ["net"]
+keywords = ["openai", "llm", "ai", "chat", "embeddings", "ollama", "api"]
+
+[package.urls]
+deck = "https://raw.githubusercontent.com/deckyard/deck-openai/main/deck.toml"
+homepage = "https://github.com/deckyard/deck-openai"
+manual = "https://deckyard.github.io/deck-openai/"
+
+[engines]
+jennifer = ">=0.26.0"
