@@ -577,10 +577,105 @@ func testARefusedConnectionIsRetried() {
         models($c);
         missed("a closed port");
     } catch (e) {
-        testing.assertContains($e.message, "cannot reach");
+        testing.assertEqual($e.kind, "net");
+        def ne as net.NetError init $e;
+        testing.assertEqual($ne.reason, "refused");
+        testing.assertFalse($ne.sent);
     }
     # one retry after the first backoff, 500 ms
     testing.assertTrue(time.unixMillis(time.now()) - $start >= 450);
+}
+
+/**
+ * Serve raw connections until the listener closes: `abort` resets each
+ * one at once, `silent` reads the request and closes without a byte of
+ * reply, `cut` sends part of a reply and then resets.
+ *
+ * @param l {net.Listener} the listener
+ * @param mode {string} `abort`, `silent` or `cut`
+ * @return {int} the connections accepted
+ */
+func serveRaw(l as net.Listener, mode as string) {
+    def n as int init 0;
+    while (true) {
+        def conn as net.Conn;
+        try {
+            $conn = net.accept($l);
+        } catch (e) {
+            return $n;
+        }
+        $n = $n + 1;
+        if ($mode == "abort") {
+            net.abort($conn);
+            continue;
+        }
+        net.readBytes($conn, 65536);
+        if ($mode == "silent") {
+            net.close($conn);
+            continue;
+        }
+        net.writeBytes(
+            $conn,
+            convert.bytesFromString(
+                "utf-8",
+                "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: 100\r\n\r\n" +
+                    '{"choi'));
+        time.sleep(time.fromMilliseconds(200));
+        net.abort($conn);
+    }
+    return $n;
+}
+
+/**
+ * A chat request against a raw fake, returning its error.
+ *
+ * @param mode {string} the fake's mode
+ * @return {list of string} the error's kind, its reason when a NetError, `sent`, `replied`, and the connections the fake accepted
+ */
+func rawChat(mode as string) {
+    def l as net.Listener init net.listen("127.0.0.1:0");
+    def addr as string init net.address($l);
+    def t as task of int init spawn {
+        return serveRaw($l, $mode);
+    };
+    def c as Client init withBaseUrl(client(""), "http://" + $addr + "/v1");
+    def out as list of string init [];
+    try {
+        chat($c, addUserText(newRequest("m"), "hi"));
+        missed($mode);
+    } catch (e) {
+        $out[] = $e.kind;
+        if ($e.kind == "net") {
+            def ne as net.NetError init $e;
+            $out[] = $ne.reason;
+            $out[] = convert.toString($ne.sent);
+            $out[] = convert.toString($ne.replied);
+        }
+    }
+    net.close($l);
+    $out[] = convert.toString(task.wait($t));
+    return $out;
+}
+
+func testNetworkFailuresAfterSendingAreNotRetried() {
+    # a POST whose reply never started: the server may have carried it out
+    testing.assertEqual(rawChat("silent"), ["net", "closed", "true", "false", "1"]);
+    # a reset in the middle of the reply
+    testing.assertEqual(rawChat("cut"), ["net", "reset", "true", "true", "1"]);
+}
+
+func testAResetBeforeTheRequestIsRead() {
+    # the reset lands while sending (retried, sent false) or while waiting
+    # for the reply (sent true, not retried); either way it is passed on
+    def got as list of string init rawChat("abort");
+    testing.assertEqual($got[0], "net");
+    testing.assertEqual($got[1], "reset");
+    testing.assertEqual($got[3], "false");
+    def accepted as int init convert.toInt($got[4]);
+    testing.assertTrue($accepted >= 1 and $accepted <= DEFAULT_RETRIES + 1);
+    if ($got[2] == "false") {
+        testing.assertEqual($accepted, DEFAULT_RETRIES + 1);
+    }
 }
 
 func testErrorsCarryTheWaitAndTheLimits() {
@@ -736,14 +831,14 @@ func testUnreachable() {
     def addr as string init net.address($l);
     net.close($l);
     try {
-        models(withBaseUrl(client(KEY), "http://" + $addr + "/v1"));
+        models(withRetries(withBaseUrl(client(KEY), "http://" + $addr + "/v1"), 0));
         missed("a closed port");
     } catch (e) {
-        testing.assertEqual($e.kind, "openai");
-        testing.assertEqual($e.status, 0);
-        testing.assertContains(
-            $e.message,
-            "openai: models: cannot reach \"http://" + $addr + "/v1\"");
+        # the network's error, passed on unchanged
+        testing.assertEqual($e.kind, "net");
+        def ne as net.NetError init $e;
+        testing.assertEqual($ne.op, "connect");
+        testing.assertEqual($ne.reason, "refused");
         testing.assertFalse(strings.contains($e.message, KEY));
     }
 }

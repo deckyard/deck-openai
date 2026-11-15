@@ -218,20 +218,35 @@ func testCustomAndMalformedToolCalls() {
     testing.assertEqual($calls[1].type, "function");
     testing.assertTrue(json.isNull($calls[1].input));
     testing.assertTrue($calls[1].raw != "");
-    for (def odd in ["[1]", "\"x\"", "null", "", strings.repeat("[", 5000)]) {
-        def reply as json.Value init json.decode(
-            '{"choices": [{"message": {"tool_calls": [{"id": "a", "type": "function", "function": {"name": "f", "arguments": ""}}]}}]}');
-        $reply = json.set($reply, "/choices/0/message/tool_calls/0/function/arguments", $odd);
-        def one as ToolCall init toolCalls($reply)[0];
-        testing.assertTrue(json.isNull($one.input));
-        testing.assertEqual($one.raw, $odd);
+    def one as json.Value init json.decode(
+        '{"choices": [{"message": {"tool_calls": [{"id": "a", "type": "function", "function": {"name": "f", "arguments": ""}}]}}]}');
+    def at as string init "/choices/0/message/tool_calls/0/function/arguments";
+    for (def odd in ["[1]", "\"x\"", "null", "\{"]) {
+        def call as ToolCall init toolCalls(json.set($one, $at, $odd))[0];
+        testing.assertTrue(json.isNull($call.input));
+        testing.assertEqual($call.raw, $odd);
     }
-    testing.assertEqual(
-        toolCalls(json.decode(
-            '{"choices": [{"message": {"tool_calls": [{"id": "a", "type": "function", "function": {"name": "f", "arguments": "{}"}}]}}]}'))[0].input,
-        json.map());
+    # "" (a tool without parameters, some servers) is {}
+    testing.assertEqual(toolCalls($one)[0].input, json.map());
+    testing.assertEqual(toolCalls($one)[0].raw, "");
+    testing.assertEqual(toolCalls(json.set($one, $at, "\{\}"))[0].input, json.map());
+    # arguments as a JSON object, not a string: that call's error alone
+    def two as json.Value init json.append(
+        json.set($one, $at, json.map({"x": 1})),
+        "/choices/0/message/tool_calls",
+        json.get(json.decode(TOOLS_OLLAMA), "/choices/0/message/tool_calls/0"));
+    def calls2 as list of ToolCall init toolCalls($two);
+    testing.assertTrue(json.isNull($calls2[0].input));
+    testing.assertEqual($calls2[0].raw, '{"x":1}');
+    testing.assertEqual(json.asString($calls2[1].input, "/city"), "Paris");
+    # a decoder cap on the arguments is kind "limit", passed on
+    try {
+        toolCalls(json.set($one, $at, strings.repeat("[", 5000)));
+        missed("arguments past the nesting cap");
+    } catch (e) {
+        testing.assertEqual($e.kind, "limit");
+    }
     for (def bad in [
-        '{"choices": [{"message": {"tool_calls": [{"id": "a", "type": "function", "function": {"name": "f", "arguments": {"x": 1}}}]}}]}',
         '{"choices": [{"message": {"tool_calls": [{"id": "a", "type": "web", "function": {"name": "f"}}]}}]}',
         '{"choices": [{"message": {"tool_calls": [{"id": "", "type": "function", "function": {"name": "f", "arguments": "{}"}}]}}]}'
     ]) {

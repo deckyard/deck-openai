@@ -16,7 +16,7 @@
  * a reply arrives whole.
  *
  * Every request has a deadline and a reply cap, and is retried on 408,
- * 409, 429, 5xx and a connection refused or reset, honouring
+ * 409, 429, 5xx and a network failure before the request was sent, honouring
  * `retry-after-ms` and `retry-after`; a reply cut off mid-way is never
  * retried. Plain `http` is refused except to this machine unless allowed.
  * A request the server refused, and every other failure of this deck,
@@ -24,7 +24,8 @@
  * error's `type`, `code` and `param`, the `x-request-id`, the wait the
  * server asked for and its rate-limit headers; a reply over the cap is kind `"limit"`,
  * a deadline that passed kind `"timeout"`, a connection the server closed
- * mid-reply kind `"closed"`. No message carries the API key.
+ * mid-reply kind `"closed"`, a network failure kind `"net"` (a
+ * `net.NetError`, passed on as it is). No message carries the API key.
  *
  * | topic | covers |
  * | --- | --- |
@@ -48,6 +49,7 @@ use io;
 use json;
 use lists;
 use maps;
+use net;
 use regex;
 use strings;
 use task;

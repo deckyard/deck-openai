@@ -12,7 +12,7 @@ export def const DEFAULT_BASE_URL as string init "https://api.openai.com/v1";
 /** How long one request may take, in milliseconds: 10 minutes, for long generations. */
 export def const DEFAULT_TIMEOUT_MS as int init 600000;
 
-/** How many times a request is retried on 408, 409, 429, 5xx or a connection refused or reset. */
+/** How many times a request is retried on 408, 409, 429, 5xx or a network failure before the request was sent. */
 export def const DEFAULT_RETRIES as int init 2;
 
 /** The largest reply read, in bytes: 32 MiB. */
@@ -38,7 +38,7 @@ def const MAX_NAMED_WAIT_MS as int init 1000000000000;
 def const MAX_LIMIT_HEADERS as int init 32;
 
 # the generic error kinds, passed on unchanged
-def const GENERIC_KINDS as list of string init ["limit", "timeout", "closed", "cancelled"];
+def const GENERIC_KINDS as list of string init ["limit", "timeout", "closed", "cancelled", "net"];
 
 # what an error message never shows: control characters and the bidi controls
 # that reorder a terminal line
@@ -88,7 +88,7 @@ def const LOOPBACK as list of string init ["127.0.0.1", "localhost", "[::1]"];
  * @field tls {http.TlsOptions} certificate checks for an `https` URL
  * @field allowPlainHttp {bool} whether plain `http` to another machine is allowed (the key then crosses the network in clear)
  * @field timeoutMs {int} how long one attempt may take
- * @field retries {int} how many times a failed attempt is retried (408, 409, 429, 5xx, a connection refused or reset)
+ * @field retries {int} how many times a failed attempt is retried (408, 409, 429, 5xx, a network failure before the request was sent)
  * @field maxBytes {int} the largest reply read
  * @field maxToolInput {int} the largest tool input, in bytes, a tool loop hands to a handler
  */
@@ -468,7 +468,8 @@ export func withTimeout(c as Client, ms as int) {
 
 /**
  * The client retrying a failed attempt another number of times: a 408,
- * 409, 429 or 5xx, or a connection refused or reset.
+ * 409, 429 or 5xx, or a network failure before the request was sent (a
+ * refused connection, a failed lookup or handshake).
  *
  * @param c {Client} the client
  * @param n {int} 0 (no retries) to 10
@@ -596,23 +597,28 @@ func headersOf(c as Client, hasBody as bool) {
 }
 
 /**
- * One attempt of a request: the response, or why the connection failed.
+ * One attempt of a request: the response, or the network failure that
+ * kept the request from the server.
  *
  * @field response {http.BytesResponse} the response, any status; empty when `failed`
- * @field failed {bool} whether no response came because the connection was refused or reset
- * @field why {string} the connection's error, cleaned; `""` when not `failed`
+ * @field failed {bool} whether the request never reached the server (a `net.NetError` with `sent` false), so another attempt is safe
+ * @field error {net.NetError} that failure, passed on as it is when no retry is left
  */
 def struct Attempt {
     response as http.BytesResponse,
     failed as bool,
-    why as string
+    error as net.NetError
 };
 
 /**
- * Send one attempt of a request within the deadline. A connection the
- * network layer refused or reset (an error of no kind of its own) is
- * returned as `failed`, to be retried; a deadline, a cap, a reply cut off
- * mid-way (kind "closed") and a malformed reply (kind "http") are thrown.
+ * Send one attempt of a request within the deadline. A network failure
+ * before the whole request was written (`net.NetError` with `sent` false:
+ * refused, unreachable, a failed lookup or handshake, a reset while
+ * sending) is returned as `failed`, to be retried. Thrown: a network
+ * failure after the request was sent (kind "net", unchanged: the server
+ * may have carried it out, a close before any byte of the reply included),
+ * a deadline, a cap, a reply cut off mid-way (kind "closed") and a
+ * malformed reply (kind "http", as an OpenaiError).
  *
  * @param c {Client} the client
  * @param method {string} the HTTP method
@@ -630,9 +636,17 @@ func exchange(c as Client, method as string, url as string, body as string, what
         return http.requestWithBytes($method, $url, $headers, $body, $timeoutMs, $maxBytes, $tls);
     };
     def none as http.BytesResponse;
+    def noError as net.NetError;
     try {
-        return Attempt{response: task.waitTimeout($t, $timeoutMs), failed: false, why: ""};
+        return Attempt{response: task.waitTimeout($t, $timeoutMs), failed: false, error: $noError};
     } catch (e) {
+        if ($e.kind == "net") {
+            def ne as net.NetError init $e;
+            if ($ne.sent) {
+                throw $ne;
+            }
+            return Attempt{response: $none, failed: true, error: $ne};
+        }
         if ($e.kind == "cancelled") {
             task.cancel($t);
             task.discard($t);
@@ -660,15 +674,15 @@ func exchange(c as Client, method as string, url as string, body as string, what
             fail($what + ": " + shown($c.baseUrl) + " sent no valid reply: " +
                 cleaned($e.message, 300));
         }
-        # the network layer's own errors (kind "runtime"): refused, reset
-        return Attempt{response: $none, failed: true, why: cleaned($e.message, 300)};
+        fail($what + ": cannot reach " + shown($c.baseUrl) + ": " + cleaned($e.message, 300));
     }
 }
 
 /**
- * Send a request, retry a failed attempt (408, 409, 429, 5xx, a connection
- * refused or reset), and read the JSON reply. A reply cut off mid-way is
- * never retried: the request may have been carried out.
+ * Send a request, retry a failed attempt (408, 409, 429, 5xx, a network
+ * failure before the request was sent), and read the JSON reply. A
+ * failure after the request was sent is never retried: the request may
+ * have been carried out.
  *
  * @param c {Client} the client
  * @param method {string} the HTTP method
@@ -688,7 +702,8 @@ func send(c as Client, method as string, url as string, body as string, what as 
                 $attempt = $attempt + 1;
                 continue;
             }
-            fail($what + ": cannot reach " + shown($c.baseUrl) + ": " + $a.why);
+            def ne as net.NetError init $a.error;
+            throw $ne;
         }
         def r as http.BytesResponse init $a.response;
         if ($r.status >= 200 and $r.status <= 299) {
@@ -866,6 +881,9 @@ func replyOf(r as http.BytesResponse, what as string, key as string) {
     try {
         $v = json.decode($text);
     } catch (e) {
+        if (lists.contains(GENERIC_KINDS, $e.kind)) {
+            throw $e;
+        }
         fail($what + ": the reply is not JSON: " + shown(unkeyed($text, $key)));
     }
     if (json.typeOf($v, "/error") == "map") {

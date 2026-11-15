@@ -147,6 +147,33 @@ func testToolLoopStopsAtMaxTurns() {
     testing.assertEqual(json.length(bodyOf(stopFake($f)[2]), "/messages"), 7);
 }
 
+func testArgumentsEmptyOrAsAnObject() {
+    def at as string init "/choices/0/message/tool_calls/";
+    def reply as json.Value init json.set(
+        json.set(
+            json.decode(TOOLS_OLLAMA),
+            $at + "0/function/arguments",
+            json.map({"city": "Paris"})),
+        $at + "1/function/arguments",
+        "");
+    def f as Fake init startFake({
+        "POST /v1/chat/completions#1": answer(200, json.encode($reply)),
+        "POST /v1/chat/completions#2": answer(200, TOOLS_OLLAMA_DONE)
+    });
+    def run as ToolRun init runTools(fakeClient($f), weatherRequest(), weatherTool, 3);
+    def second as json.Value init bodyOf(stopFake($f)[1]);
+    testing.assertEqual($run.calls, 2);
+    # the object: an error for that call alone, sent back as a string
+    testing.assertEqual(
+        json.asString($second, "/messages/1/tool_calls/0/function/arguments"),
+        '{"city":"Paris"}');
+    testing.assertEqual(
+        json.asString($second, "/messages/2/content"),
+        '{"error":"the arguments came as a JSON object, not as a JSON string; call the tool again"}');
+    # "": the handler got {} (and answered that no city was given)
+    testing.assertEqual(json.asString($second, "/messages/3/content"), '{"error":"no city given"}');
+}
+
 func testToolInputOverTheCap() {
     def big as string init '{"city": "' + strings.repeat("x", 2000) + '"}';
     def reply as json.Value init json.set(

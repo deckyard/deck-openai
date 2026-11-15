@@ -75,9 +75,11 @@ func sumUsage(a as Usage, b as Usage) {
  * Arguments that are not a JSON object are model output, not the
  * program's: the handler is not called and the model gets the result
  * `{"error": "the arguments are not a JSON object: ..."}`, so it can send
- * the call again. So does an input over the client's cap
- * (`withMaxToolInput`, 1 MiB by default): `{"error": "the input is over N
- * bytes; ..."}`. A turn counts against `maxTurns` either way.
+ * the call again; arguments sent as a JSON object instead of a string get
+ * `{"error": "the arguments came as a JSON object, ..."}`. `""` reaches the
+ * handler as `{}`. An input over the client's cap (`withMaxToolInput`,
+ * 1 MiB by default) is not parsed and is answered with `{"error": "the
+ * input is over N bytes; ..."}`. A turn counts against `maxTurns` either way.
  *
  * The loop stops after `maxTurns` requests even when the model still
  * calls tools: it runs and answers the last reply's calls, then returns
@@ -224,6 +226,11 @@ func runCall(
         def bad as string init "not JSON";
         try {
             $bad = "a JSON " + json.typeOf(json.decode($call.raw));
+            if ($bad == "a JSON map") {
+                # only arguments sent as a JSON object, not as a string, get here
+                return toolError(
+                    "the arguments came as a JSON object, not as a JSON string; call the tool again");
+            }
         } catch (e) {
             if (lists.contains(GENERIC_KINDS, $e.kind)) {
                 throw $e;

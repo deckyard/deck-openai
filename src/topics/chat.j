@@ -406,14 +406,17 @@ export func finishReason(reply as json.Value) {
 /**
  * The tool calls the model asked for (first choice), in its order. Several
  * are parallel calls: run them all before the next request. A function's
- * arguments come parsed in `input`; arguments that are not a JSON object
- * (the model's mistake) give `input` JSON `null`, with the text in `raw`.
+ * arguments come parsed in `input` (`""` as `{}`); arguments that are not a
+ * JSON object (the model's mistake) give `input` JSON `null`, with the text
+ * in `raw`, and so do arguments sent as a JSON value instead of a JSON
+ * string (`raw` is then that value encoded).
  * So does an input over `DEFAULT_MAX_TOOL_INPUT` bytes (1 MiB), which is
  * not parsed; `json.decode($call.raw)` reads it when wanted.
  *
  * @param reply {json.Value} the reply of `chat`
  * @return {list of ToolCall} the calls, empty when there are none
- * @throws {OpenaiError} when a call is malformed: no id or name, arguments not a string
+ * @throws {OpenaiError} when a call is malformed: no id or name, or a type other than function or custom
+ * @throws {Error} kind "limit" when arguments nest deeper or hold more values than `json.decode` reads
  */
 export func toolCalls(reply as json.Value) {
     return callsOf($reply, DEFAULT_MAX_TOOL_INPUT);
@@ -465,13 +468,7 @@ func callsOf(reply as json.Value, most as int) {
         };
         if ($call.type == "function") {
             $call.name = textAt($reply, $p + "/function/name", $what);
-            if (json.typeOf($reply, $p + "/function/arguments") != "string") {
-                fail($what + ": the arguments of " + shown($call.name) + " are not a JSON string");
-            }
-            $call.raw = json.asString($reply, $p + "/function/arguments");
-            if (not overInput($call.raw, $most)) {
-                $call.input = argumentsOf($call.raw);
-            }
+            $call = withArguments($call, $reply, $p + "/function/arguments", $most);
         } elseif ($call.type == "custom") {
             $call.name = textAt($reply, $p + "/custom/name", $what);
             $call.raw = textAt($reply, $p + "/custom/input", $what);
@@ -492,14 +489,47 @@ func callsOf(reply as json.Value, most as int) {
 }
 
 /**
+ * A function call with its arguments read: `raw` the text, `input` parsed
+ * (not past the cap). Arguments sent as a JSON value, not a JSON string,
+ * are this call's error alone, answered by the tool loop: `raw` is the
+ * value encoded, `input` stays null.
+ *
+ * @param call {ToolCall} the call, `input` JSON `null`
+ * @param reply {json.Value} the reply
+ * @param ptr {string} the pointer of the arguments
+ * @param most {int} the largest input parsed, in bytes
+ * @return {ToolCall} the call
+ */
+func withArguments(call as ToolCall, reply as json.Value, ptr as string, most as int) {
+    def t as string init json.typeOf($reply, $ptr);
+    if ($t == "missing") {
+        return $call;
+    }
+    if ($t != "string") {
+        $call.raw = json.encode(json.get($reply, $ptr));
+        return $call;
+    }
+    $call.raw = json.asString($reply, $ptr);
+    if (not overInput($call.raw, $most)) {
+        $call.input = argumentsOf($call.raw);
+    }
+    return $call;
+}
+
+/**
  * A function call's arguments, parsed. They are model output, so text
  * that is not a JSON object is no error here: the tool loop answers it.
- * `json.decode` bounds the work (nesting depth, node count).
+ * `""` (some servers' arguments of a tool without parameters) is `{}`.
+ * `json.decode` bounds the work: past its nesting or node cap it throws
+ * kind "limit", which is passed on.
  *
  * @param raw {string} the arguments as the model wrote them
  * @return {json.Value} the arguments, a JSON map; JSON `null` when they are not a JSON object
  */
 func argumentsOf(raw as string) {
+    if ($raw == "") {
+        return json.map();
+    }
     def v as json.Value;
     try {
         $v = json.decode($raw);
@@ -605,6 +635,7 @@ export func usage(reply as json.Value) {
  * @param reply {json.Value} the reply of `chat`
  * @return {json.Value} the decoded content
  * @throws {OpenaiError} when the model refused, ran out of tokens (`finish_reason` `length`), or the text is not JSON
+ * @throws {Error} kind "limit" when the text nests too deep or holds too many values for `json.decode`
  */
 export func parsed(reply as json.Value) {
     def why as string init refusal($reply);
@@ -618,6 +649,9 @@ export func parsed(reply as json.Value) {
     try {
         return json.decode($content);
     } catch (e) {
+        if (lists.contains(GENERIC_KINDS, $e.kind)) {
+            throw $e;
+        }
         fail("parsed: the reply's text is not JSON: " + shown($content));
     }
 }
