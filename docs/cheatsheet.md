@@ -15,7 +15,8 @@ A failure throws `OpenaiError` (kind `"openai"`) with the HTTP `status`
 the `requestId`, the `retryAfterMs` the server asked for and its rate-limit
 headers (`limits`); a reply over the cap is kind `"limit"`, a deadline
 that passed kind `"timeout"`, a connection
-closed mid-reply kind `"closed"`, a cancelled task kind `"cancelled"`. A
+closed mid-reply kind `"closed"`, a cancelled task kind `"cancelled"`, a
+network failure kind `"net"` (a `net.NetError`, passed on as it is). A
 `c` argument is a `Client`; a `request` or `reply` is a `json.Value` in
 the API's own fields.
 
@@ -25,7 +26,7 @@ the API's own fields.
 |---|---|---|
 | `DEFAULT_BASE_URL` | `"https://api.openai.com/v1"` | the OpenAI API |
 | `DEFAULT_TIMEOUT_MS` | `600000` | the deadline of one attempt |
-| `DEFAULT_RETRIES` | `2` | retries on 408, 409, 429, 5xx, a connection refused or reset |
+| `DEFAULT_RETRIES` | `2` | retries on 408, 409, 429, 5xx, a network failure before the request was sent |
 | `DEFAULT_MAX_BYTES` | `33554432` | the largest reply read |
 | `DEFAULT_MAX_TOOL_INPUT` | `1048576` | the largest tool input a tool loop hands to a handler (and `toolCalls` parses) |
 | `AZURE_API_VERSION` | `"2024-10-21"` | the last dated GA `api-version` of Azure OpenAI |
@@ -46,7 +47,7 @@ the API's own fields.
 | `withPlainHttp(c)` | `Client` | allow plain http to another machine |
 | `withTls(c, tls)` | `Client` | certificate options (`caCert`, `skipVerify`) |
 | `withTimeout(c, ms)` | `Client` | the deadline of one attempt, 1000 to 86400000 ms |
-| `withRetries(c, n)` | `Client` | retries on 408, 409, 429, 5xx, a connection refused or reset, 0 to 10 |
+| `withRetries(c, n)` | `Client` | retries on 408, 409, 429, 5xx, a network failure before the request was sent, 0 to 10 |
 | `withMaxBytes(c, most)` | `Client` | the largest reply, 65536 to 1073741824 bytes |
 | `withMaxToolInput(c, most)` | `Client` | the largest tool input a tool loop hands to a handler, 1024 to 1073741824 bytes; a larger one gets a `toolError` |
 | `models(c)` | `list of Model` | the models the server offers |
@@ -71,7 +72,7 @@ the API's own fields.
 | `text(reply)` | `string` | the first choice's text, `""` for none |
 | `refusal(reply)` | `string` | why the model refused, `""` when it did not |
 | `finishReason(reply)` | `string` | `stop`, `length`, `tool_calls`, `content_filter` |
-| `toolCalls(reply)` | `list of ToolCall` | the tool calls of the first choice, their arguments parsed (up to `DEFAULT_MAX_TOOL_INPUT`) |
+| `toolCalls(reply)` | `list of ToolCall` | the tool calls of the first choice, their arguments parsed (up to `DEFAULT_MAX_TOOL_INPUT`; `""` as `{}`) |
 | `usage(reply)` | `Usage` | the tokens used, cached and reasoning tokens included |
 | `parsed(reply)` | `json.Value` | the text as JSON; throws on a refusal, a cut-off reply or non-JSON |
 
@@ -107,7 +108,7 @@ the API's own fields.
 | `tls as http.TlsOptions` | certificate checks for https |
 | `allowPlainHttp as bool` | plain http to another machine allowed |
 | `timeoutMs as int` | the deadline of one attempt |
-| `retries as int` | retries on 408, 409, 429, 5xx, a connection refused or reset |
+| `retries as int` | retries on 408, 409, 429, 5xx, a network failure before the request was sent |
 | `maxBytes as int` | the largest reply |
 | `maxToolInput as int` | the largest tool input a tool loop hands to a handler |
 
@@ -139,8 +140,8 @@ the API's own fields.
 |---|---|
 | `id as string` | the call's id, which the result names |
 | `name as string` | the tool |
-| `input as json.Value` | the arguments parsed (a map); a custom tool's input as a JSON string; JSON `null` when they are not a JSON object or are over the cap |
-| `raw as string` | the arguments as the model wrote them (JSON text), or a custom tool's input |
+| `input as json.Value` | the arguments parsed (a map, `""` as `{}`); a custom tool's input as a JSON string; JSON `null` when they are not a JSON object, came as a JSON value instead of a string, or are over the cap |
+| `raw as string` | the arguments as the model wrote them (JSON text; arguments sent as a JSON value, encoded), or a custom tool's input |
 | `type as string` | `function` or `custom` |
 
 ### `Usage`

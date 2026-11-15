@@ -10,7 +10,8 @@ that runs the model's tool calls through a function, embeddings and model
 listing. The base URL is settable, so it talks to OpenAI, Azure OpenAI,
 Ollama, vLLM, the llama.cpp server, LM Studio, OpenRouter, Groq, Mistral
 and Together alike. Every request has a deadline, a reply cap and retries
-on 408, 409, 429, 5xx and a refused connection; errors carry the server's
+on 408, 409, 429, 5xx and a refused connection, never resending a request
+the server may have received; errors carry the server's
 status, type, code, the wait it asked for and its rate-limit headers.
 
 **[Documentation](https://deckyard.github.io/deck-openai/)**

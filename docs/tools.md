@@ -73,8 +73,14 @@ again. An error the handler throws ends the loop and reaches the caller
 unchanged, with the conversation so far lost. Arguments that are not a JSON
 object (a model's malformed output, seen with small models) never reach the
 handler: the call is answered with `{"error": "the arguments are not a JSON
-object: ..."}` so the model can send it again. So do arguments over the
-client's cap, `withMaxToolInput(c, bytes)` (1 MiB by default): `{"error":
+object: ..."}` so the model can send it again; arguments a server sent as
+a JSON object instead of a JSON string get `{"error": "the arguments came
+as a JSON object, not as a JSON string; ..."}`, for that call alone.
+Empty arguments (`""`, some servers' way of calling a tool without
+parameters) reach the handler as `{}`. Arguments that nest past
+`json.decode`'s caps end the loop with kind `"limit"`. Arguments over the
+client's cap, `withMaxToolInput(c, bytes)` (1 MiB by default), are not
+parsed and are answered with `{"error":
 "the input is over N bytes; call the tool again with a smaller input"}`.
 `n` other than 1 is refused: the loop follows one choice. A refusal ends
 the loop like any reply without tool calls.

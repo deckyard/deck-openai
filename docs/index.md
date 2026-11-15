@@ -79,7 +79,7 @@ A Microsoft Entra ID token instead of a key goes as a bearer token:
 | Setting | Default | Change with |
 |---|---|---|
 | deadline of one attempt | 10 minutes | `withTimeout(c, ms)` |
-| retries on 408, 409, 429, 5xx, a connection refused or reset | 2 | `withRetries(c, n)` |
+| retries on 408, 409, 429, 5xx, a network failure before the request was sent | 2 | `withRetries(c, n)` |
 | largest reply | 32 MiB | `withMaxBytes(c, most)` |
 | largest tool input a tool loop hands to a handler | 1 MiB | `withMaxToolInput(c, most)` |
 | certificate checks | system roots | `withTls(c, tls)` |
@@ -116,11 +116,13 @@ throws `openai.OpenaiError`, kind `"openai"`:
 | `retryAfterMs` | how long the server asked to wait (`retry-after-ms`, else `retry-after` in seconds or as an HTTP date), in ms; 0 when it named no wait |
 | `limits` | the server's rate-limit headers, names lower-cased: `x-ratelimit-limit-requests`, `x-ratelimit-remaining-tokens`, `x-ratelimit-reset-requests`, ..., `retry-after`, `retry-after-ms` |
 
-The generic kinds pass through as `Error`: `"limit"` for a reply over the
-cap, `"timeout"` for a deadline that
-passed, `"closed"` for a server that closed the connection mid-reply,
-`"cancelled"` for a cancelled task. Match `kind` and the fields, never the
-message:
+The generic kinds pass through: `"limit"` for a reply over the cap (or a
+reply or tool arguments past `json.decode`'s nesting or node cap),
+`"timeout"` for a deadline that passed, `"closed"` for a server that
+closed the connection mid-reply, `"cancelled"` for a cancelled task, and
+`"net"` for a network failure: the `net.NetError` as `http` threw it, with
+its `reason` (`refused`, `reset`, `dns`, `tls`, `closed`, ...) and `sent` /
+`replied`. Match `kind` and the fields, never the message:
 
 ```jennifer
 try {
@@ -146,14 +148,18 @@ key (OpenAI's own masked one included) by `sk-***`. Do not print a
 `Client`, which holds the key.
 
 **Retries.** A 408, 409, 429 or 5xx is retried, by default twice, and so
-is a connection the network refused or reset. The wait is the server's
+is a network failure before the whole request was sent (a `NetError` with
+`sent` false: a refused connection, a failed lookup or TLS handshake, a
+reset while sending). The wait is the server's
 `retry-after-ms`, else its `retry-after` in seconds or as an HTTP date,
 else 0.5 s doubled per retry up to 8 s. Not retried: a server asking to
 wait over a minute (the error carries the wait in `retryAfterMs`), a
 response with `x-should-retry: false`, a 429 whose type or code is
-`insufficient_quota` (out of credit; waiting does not help), a reply cut
-off mid-way (kind `"closed"`: the request may have been carried out, and
-a `POST` sent twice could be billed twice), a reply that is not HTTP, and a
+`insufficient_quota` (out of credit; waiting does not help), any network
+failure after the request was sent (`sent` true: a reset, or a server that
+closed before any byte of its reply, reason `closed`), a reply cut off
+mid-way (kind `"closed"`), since the request may have been carried out and
+a `POST` sent twice could be billed twice, a reply that is not HTTP, and a
 deadline that passed. Every method is retried on a status, a `POST` too:
 the server answered that it did not carry the request out, though a 5xx
 after a long generation may still be billed.
@@ -161,7 +167,7 @@ after a long generation may still be billed.
 ## Not in this version
 
 - **Streaming.** All these APIs stream over server-sent events, which the
-  bundled `http` cannot read incrementally yet. M28.29 adds a streaming
+  bundled `http` cannot read incrementally yet. M30.9 adds a streaming
   `http` and an `sse` module; streaming then becomes a deck addition. A
   request with `stream: true` is refused.
 - **The Responses API** (`/responses`), OpenAI's newer interface with
