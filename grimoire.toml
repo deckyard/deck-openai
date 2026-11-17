@@ -12,7 +12,7 @@ clean = true
 jobs = 0
 
 [html]
-theme = "nordic"
+theme = "carbon"
 mode = "auto"
 navPosition = "left"
 tocPosition = "right"
