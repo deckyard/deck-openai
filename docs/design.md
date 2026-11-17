@@ -180,13 +180,3 @@ the deadline; transport failures as `net.NetError` with `sent` and
 `"limit"` (M28.68); `net.abort` for the tests' real resets. Streaming waits
 for the streaming `http` and `sse` work (M30.9); a bulk number reader for
 JSON embeddings is M29.8.
-
-## History
-
-- 2026-11-14: built; tested against the spec and live against Ollama.
-- 2026-11-15: validated (key masking for every key form, retry waits,
-  header handling, `call` paths, embedding checks) and aligned with the
-  sibling decks in four rounds (shared names, `ToolCall` and `Usage`
-  shapes, one retry rule, tool input cap, `ToolRun` `stopped`, error
-  `retryAfterMs` and `limits`, network errors keyed on `sent`, empty and
-  object tool arguments).
