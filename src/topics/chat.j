@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: LGPL-3.0-only
 # SPDX-FileCopyrightText: Copyright (C) 2026 mplx <mplx@jennifer-lang.dev>
-# pragma-jennifer-version: >=0.26.0
+# pragma-jennifer-version: >=0.27.0
 
 # openai - chat: Chat Completions, the builders of a request and the readers
 # of a reply. Spliced into openai.j via include.
@@ -437,7 +437,7 @@ func overInput(raw as string, most as int) {
     if (len($raw) * 4 <= $most) {
         return false;
     }
-    return len(convert.bytesFromString("utf-8", $raw)) > $most;
+    return len(encoding.encode("utf-8", $raw)) > $most;
 }
 
 /**

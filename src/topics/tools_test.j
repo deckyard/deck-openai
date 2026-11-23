@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: LGPL-3.0-only
 # SPDX-FileCopyrightText: Copyright (C) 2026 mplx <mplx@jennifer-lang.dev>
-# pragma-jennifer-version: >=0.26.0
+# pragma-jennifer-version: >=0.27.0
 
 # openai - white-box tests for the tool loop. Spliced into openai_test.j via
 # include.
@@ -175,7 +175,7 @@ func testArgumentsEmptyOrAsAnObject() {
 }
 
 func testToolInputOverTheCap() {
-    def big as string init '{"city": "' + strings.repeat("x", 2000) + '"}';
+    def big as string init '{"city": "' + strings.replicate("x", 2000) + '"}';
     def reply as json.Value init json.set(
         json.decode(TOOLS_OLLAMA),
         "/choices/0/message/tool_calls/1/function/arguments",
@@ -199,13 +199,13 @@ func testToolInputOverTheCap() {
     def huge as json.Value init json.set(
         $reply,
         "/choices/0/message/tool_calls/1/function/arguments",
-        '{"city": "' + strings.repeat("x", DEFAULT_MAX_TOOL_INPUT) + '"}');
+        '{"city": "' + strings.replicate("x", DEFAULT_MAX_TOOL_INPUT) + '"}');
     def calls as list of ToolCall init toolCalls($huge);
     testing.assertTrue(json.isNull($calls[1].input));
     testing.assertEqual(len($calls[1].raw), DEFAULT_MAX_TOOL_INPUT + 12);
     testing.assertEqual(
         json.asString(toolCalls($reply)[1].input, "/city"),
-        strings.repeat("x", 2000));
+        strings.replicate("x", 2000));
     for (def bad in [1023, 1073741825]) {
         try {
             withMaxToolInput($c, $bad);

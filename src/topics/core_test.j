@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: LGPL-3.0-only
 # SPDX-FileCopyrightText: Copyright (C) 2026 mplx <mplx@jennifer-lang.dev>
-# pragma-jennifer-version: >=0.26.0
+# pragma-jennifer-version: >=0.27.0
 
 # openai - white-box tests for the core topic, and the fake server the other
 # overlays use. Spliced into openai_test.j via include.
@@ -46,7 +46,8 @@ func missed(what as string) {
  * n-th time that request comes, from 1), then `METHOD path?query`, then
  * `METHOD path`; it is the status, a newline, header lines `Name: value`,
  * an empty line and the body. A request with no answer gets 404 and
- * OpenAI's error object; an answer whose status is `SLEEP` waits 1.5 seconds.
+ * OpenAI's error object; an answer whose status is `SLEEP <ms>` waits that
+ * many milliseconds, then answers 200 `{}`.
  *
  * @param answers {map of string to string} the answers
  * @return {Fake} the server
@@ -93,7 +94,7 @@ func serveFake(srv as httpd.Server, answers as map of string to string) {
             }
         }
         $seen[] = strings.join($line, "|") + "\n" +
-            convert.stringFromBytes("utf-8", httpd.body($req));
+            encoding.decode("utf-8", httpd.body($req));
         def spec as string init "404\nContent-Type: application/json\n\n" +
             '{"error": {"message": "no answer for ' + $key +
             '", "type": "invalid_request_error", "param": null, "code": null}}';
@@ -111,8 +112,8 @@ func serveFake(srv as httpd.Server, answers as map of string to string) {
             def at as int init strings.indexOf($h, ": ");
             httpd.setHeader($req, $h[..$at], $h[$at + 2..]);
         }
-        if ($head[0] == "SLEEP") {
-            time.sleep(time.fromMilliseconds(1500));
+        if (strings.startsWith($head[0], "SLEEP ")) {
+            time.sleep(time.fromMilliseconds(convert.toInt($head[0][len("SLEEP ")..])));
             httpd.respond($req, 200, '{}');
         } else {
             httpd.respond($req, convert.toInt($head[0]), $spec[$split + 2..]);
@@ -520,7 +521,7 @@ func testRetryWaits() {
         status: 429,
         statusText: "Too Many Requests",
         headers: {},
-        body: convert.bytesFromString("utf-8", "")
+        body: encoding.encode("utf-8", "")
     };
     testing.assertEqual(retryWait($r, 0), 500);
     testing.assertEqual(retryWait($r, 1), 1000);
@@ -616,7 +617,7 @@ func serveRaw(l as net.Listener, mode as string) {
         }
         net.writeBytes(
             $conn,
-            convert.bytesFromString(
+            encoding.encode(
                 "utf-8",
                 "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: 100\r\n\r\n" +
                     '{"choi'));
@@ -723,7 +724,7 @@ func testServerTextNeverShowsTheKey() {
             '{"error": {"message": "bad key Bearer ' + $key +
                 '", "type": "auth ' + $key + '", "param": null, "code": null}}'),
         "GET /v1/page": "200\nContent-Type: text/html\n\n<html>you sent " + $key + "</html>",
-        "GET /v1/plain": "403\nContent-Type: text/plain\n\n" + strings.repeat("x", 490) + $key
+        "GET /v1/plain": "403\nContent-Type: text/plain\n\n" + strings.replicate("x", 490) + $key
     });
     def c as Client init withBaseUrl(client($key), $f.base);
     for (def path in ["/models", "/page", "/plain"]) {
@@ -750,7 +751,7 @@ func testWithHeaderKeepsOneHeaderPerName() {
 }
 
 func testReplyCap() {
-    def big as string init '{"pad": "' + strings.repeat("x", 70000) + '"}';
+    def big as string init '{"pad": "' + strings.replicate("x", 70000) + '"}';
     def f as Fake init startFake({"GET /v1/big": answer(200, $big)});
     def c as Client init withMaxBytes(fakeClient($f), 65536);
     try {
@@ -770,8 +771,9 @@ func testReplyCap() {
     stopFake($f);
 }
 
+# The 1000 ms floor timeout fires before the fake's 1250 ms answer.
 func testDeadline() {
-    def f as Fake init startFake({"GET /v1/slow": "SLEEP\n\n"});
+    def f as Fake init startFake({"GET /v1/slow": "SLEEP 1250\n\n"});
     def c as Client init withTimeout(fakeClient($f), 1000);
     try {
         call($c, "GET", "/slow", json.decode("null"));
@@ -783,13 +785,14 @@ func testDeadline() {
     stopFake($f);
 }
 
+# The cancel comes while the 250 ms answer is still pending.
 func testCancelledPassesOn() {
-    def f as Fake init startFake({"GET /v1/slow": "SLEEP\n\n"});
+    def f as Fake init startFake({"GET /v1/slow": "SLEEP 250\n\n"});
     def c as Client init fakeClient($f);
     def t as task of json.Value init spawn {
         return call($c, "GET", "/slow", json.decode("null"));
     };
-    time.sleep(time.fromMilliseconds(200));
+    time.sleep(time.fromMilliseconds(50));
     task.cancel($t);
     try {
         task.wait($t);
@@ -808,7 +811,7 @@ func testClosedMidReply() {
         net.readBytes($conn, 4096);
         net.writeBytes(
             $conn,
-            convert.bytesFromString(
+            encoding.encode(
                 "utf-8",
                 "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: 100\r\n\r\n" +
                     '{"choi'));

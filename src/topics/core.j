@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: LGPL-3.0-only
 # SPDX-FileCopyrightText: Copyright (C) 2026 mplx <mplx@jennifer-lang.dev>
-# pragma-jennifer-version: >=0.26.0
+# pragma-jennifer-version: >=0.27.0
 
 # openai - core: the client and its settings, Azure, the HTTP exchange with
 # its deadline, cap and retries, errors, JSON readers, `models` and `call`.
@@ -870,7 +870,7 @@ func dateWait(value as string) {
 func replyOf(r as http.BytesResponse, what as string, key as string) {
     def text as string init "";
     try {
-        $text = convert.stringFromBytes("utf-8", $r.body);
+        $text = encoding.decode("utf-8", $r.body);
     } catch (e) {
         fail($what + ": the reply is not UTF-8");
     }
@@ -935,7 +935,7 @@ func errorOf(r as http.BytesResponse, what as string, key as string) {
     def why as string init $r.statusText;
     def text as string init "";
     try {
-        $text = unkeyed(strings.trim(convert.stringFromBytes("utf-8", $r.body)), $key);
+        $text = unkeyed(strings.trim(encoding.decode("utf-8", $r.body)), $key);
     } catch (err) {
         $text = "";
     }

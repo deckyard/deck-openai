@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: LGPL-3.0-only
 # SPDX-FileCopyrightText: Copyright (C) 2026 mplx <mplx@jennifer-lang.dev>
-# pragma-jennifer-version: >=0.26.0
+# pragma-jennifer-version: >=0.27.0
 
 # openai - white-box tests for the chat topic. Spliced into openai_test.j via
 # include.
@@ -241,7 +241,7 @@ func testCustomAndMalformedToolCalls() {
     testing.assertEqual(json.asString($calls2[1].input, "/city"), "Paris");
     # a decoder cap on the arguments is kind "limit", passed on
     try {
-        toolCalls(json.set($one, $at, strings.repeat("[", 5000)));
+        toolCalls(json.set($one, $at, strings.replicate("[", 5000)));
         missed("arguments past the nesting cap");
     } catch (e) {
         testing.assertEqual($e.kind, "limit");
