@@ -5,12 +5,12 @@
 
 ## Scope
 
-`@deckyard/openai` is a client for the OpenAI-compatible HTTP API: Chat
+`@deckyard/openai` is a client for the OpenAI™-compatible HTTP API: Chat
 Completions with tools and structured output, a tool loop, embeddings,
 model listing, and `call` for any other endpoint. The base URL is
-settable, so one client talks to OpenAI, Azure OpenAI and the servers that
-implement the same API: Ollama, vLLM, the llama.cpp server, LM Studio,
-OpenRouter, Groq, Mistral, Together, and Gemini's OpenAI-compatible
+settable, so one client talks to OpenAI, Azure™ OpenAI and the servers that
+implement the same API: Ollama™, vLLM™, the llama.cpp™ server, LM Studio™,
+OpenRouter™, Groq™, Mistral™, Together™, and Gemini™'s OpenAI-compatible
 endpoint.
 
 It is one of three LLM decks, one per vendor API (`@deckyard/anthropic`,
@@ -71,7 +71,7 @@ Out of scope, on purpose:
   closures, so a handler reaches state through top-level variables or the
   read-only context of `runToolsWith`. `n` other than 1 is refused.
 - **`addReply`** keeps what a request may carry: role, content, tool calls,
-  a refusal, and `reasoning_content` (DeepSeek and others want their
+  a refusal, and `reasoning_content` (DeepSeek™ and others want their
   thinking back within a tool loop). It drops reader-only fields such as
   `annotations`, Ollama's `reasoning` and a tool call's `index`.
 - **Embeddings travel as base64.** `embed` asks for `encoding_format`
@@ -81,7 +81,7 @@ Out of scope, on purpose:
   (`<endpoint>/openai/v1`, `api-key` header, no `api-version`). The dated
   API, `azureVersioned`, puts the deployment (the request's `model`) in the
   path and adds `api-version` to every request; `AZURE_API_VERSION` is the
-  last dated GA version. A Microsoft Entra ID token goes as a bearer token
+  last dated GA version. A Microsoft™ Entra™ ID token goes as a bearer token
   through `client` and `withBaseUrl`.
 - **Retries are the deck's own**, not those of `http.send`, because the
   API's `retry-after-ms` header and the safety rule below need them.

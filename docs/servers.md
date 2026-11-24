@@ -5,22 +5,22 @@
 
 The client sends every request to its base URL plus the endpoint's path
 (`/chat/completions`, `/embeddings`, `/models`), so any server that serves
-those paths with OpenAI's fields works. The base URL is the part before
+those paths with OpenAI™'s fields works. The base URL is the part before
 `/chat/completions`.
 
 | Server | Base URL | Key |
 |---|---|---|
 | OpenAI | `https://api.openai.com/v1` (the default) | `OPENAI_API_KEY` |
-| Ollama | `http://127.0.0.1:11434/v1` | none (`""`) |
-| vLLM | `http://127.0.0.1:8000/v1` | `--api-key` if set |
-| llama.cpp server | `http://127.0.0.1:8080/v1` | `--api-key` if set |
-| LM Studio | `http://127.0.0.1:1234/v1` | none |
-| OpenRouter | `https://openrouter.ai/api/v1` | the OpenRouter key |
-| Groq | `https://api.groq.com/openai/v1` | the Groq key |
-| Mistral | `https://api.mistral.ai/v1` | the Mistral key |
-| Together | `https://api.together.xyz/v1` | the Together key |
-| Gemini | `https://generativelanguage.googleapis.com/v1beta/openai` | the AI Studio key |
-| Azure OpenAI | `azure(endpoint, key)`: `<endpoint>/openai/v1` | the resource key |
+| Ollama™ | `http://127.0.0.1:11434/v1` | none (`""`) |
+| vLLM™ | `http://127.0.0.1:8000/v1` | `--api-key` if set |
+| llama.cpp™ server | `http://127.0.0.1:8080/v1` | `--api-key` if set |
+| LM Studio™ | `http://127.0.0.1:1234/v1` | none |
+| OpenRouter™ | `https://openrouter.ai/api/v1` | the OpenRouter key |
+| Groq™ | `https://api.groq.com/openai/v1` | the Groq key |
+| Mistral™ | `https://api.mistral.ai/v1` | the Mistral key |
+| Together™ | `https://api.together.xyz/v1` | the Together key |
+| Gemini™ | `https://generativelanguage.googleapis.com/v1beta/openai` | the AI Studio™ key |
+| Azure™ OpenAI | `azure(endpoint, key)`: `<endpoint>/openai/v1` | the resource key |
 
 ```jennifer
 def router as openai.Client init openai.withBaseUrl(openai.client(os.getEnv("OPENROUTER_API_KEY")),
@@ -56,7 +56,7 @@ ignored or refused with a 400, a model name is the server's own
 
 ## Ollama
 
-Checked live with Ollama 0.40.16 (`ollama/ollama` in Docker, bound to
+Checked live with Ollama 0.40.16 (`ollama/ollama` in Docker™, bound to
 127.0.0.1) and the models `qwen2.5:0.5b` and `all-minilm`: chat with the
 `developer` role and `max_completion_tokens`, two parallel tool calls in
 one reply and the answer after their results, a no-argument tool (its

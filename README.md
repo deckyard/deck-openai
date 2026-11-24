@@ -4,12 +4,12 @@
 [![Documentation](https://img.shields.io/badge/docs-github%20pages-blue)](https://deckyard.github.io/deck-openai/)
 [![release](https://img.shields.io/github/v/release/deckyard/deck-openai)](https://github.com/deckyard/deck-openai/releases/latest)
 
-A client for the OpenAI-compatible API for [Jennifer](https://jennifer-lang.dev/)
+A client for the OpenAI™-compatible API for [Jennifer](https://jennifer-lang.dev/)
 programs: Chat Completions with tools and structured output, a tool loop
 that runs the model's tool calls through a function, embeddings and model
-listing. The base URL is settable, so it talks to OpenAI, Azure OpenAI,
-Ollama, vLLM, the llama.cpp server, LM Studio, OpenRouter, Groq, Mistral
-and Together alike. Every request has a deadline, a reply cap and retries
+listing. The base URL is settable, so it talks to OpenAI, Azure™ OpenAI,
+Ollama™, vLLM™, the llama.cpp™ server, LM Studio™, OpenRouter™, Groq™, Mistral™
+and Together™ alike. Every request has a deadline, a reply cap and retries
 on 408, 409, 429, 5xx and a refused connection, never resending a request
 the server may have received; errors carry the server's
 status, type, code, the wait it asked for and its rate-limit headers.
@@ -60,3 +60,14 @@ tools/pack.sh dist                   # build the release archive
 ## Licence
 
 LGPL-3.0-only, see [LICENSE](LICENSE). Copyright (C) 2026 mplx &lt;mplx@jennifer-lang.dev&gt;.
+
+## Trademarks
+
+OpenAI™ is a trademark of OpenAI Foundation. Azure™ and Microsoft Entra™ are
+trademarks of Microsoft Corporation. Gemini™ is a trademark of Google LLC.
+Groq™ is a trademark of Groq, Inc. Ollama™ is a trademark of Ollama Inc.
+OpenRouter™ is a trademark of OpenRouter, Inc. LM Studio™ is a trademark of
+Element Labs Inc. Other product and company names may be trademarks of their
+respective owners. They are used only to identify the products this deck
+works with. This deck is an independent project, not affiliated with,
+sponsored or endorsed by OpenAI Foundation or any other provider named here.

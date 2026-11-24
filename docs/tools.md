@@ -22,7 +22,7 @@ def weather as json.Value init openai.withStrict(openai.tool("get_weather", "The
 $req = openai.addTool($req, $weather);
 ```
 
-With `withStrict` the model's arguments follow the schema exactly (OpenAI's
+With `withStrict` the model's arguments follow the schema exactly (OpenAI™'s
 structured outputs); the schema then needs `additionalProperties: false`
 and every property in `required`, an optional one as a union with `null`.
 A tool is a plain `json.Value`, so a list of them can be kept and offered

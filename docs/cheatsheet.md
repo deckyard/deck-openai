@@ -24,12 +24,12 @@ the API's own fields.
 
 | Constant | Value | Meaning |
 |---|---|---|
-| `DEFAULT_BASE_URL` | `"https://api.openai.com/v1"` | the OpenAI API |
+| `DEFAULT_BASE_URL` | `"https://api.openai.com/v1"` | the OpenAI™ API |
 | `DEFAULT_TIMEOUT_MS` | `600000` | the deadline of one attempt |
 | `DEFAULT_RETRIES` | `2` | retries on 408, 409, 429, 5xx, a network failure before the request was sent |
 | `DEFAULT_MAX_BYTES` | `33554432` | the largest reply read |
 | `DEFAULT_MAX_TOOL_INPUT` | `1048576` | the largest tool input a tool loop hands to a handler (and `toolCalls` parses) |
-| `AZURE_API_VERSION` | `"2024-10-21"` | the last dated GA `api-version` of Azure OpenAI |
+| `AZURE_API_VERSION` | `"2024-10-21"` | the last dated GA `api-version` of Azure™ OpenAI |
 | `MAX_TURNS` | `100` | the most requests of one tool loop |
 | `MAX_INPUTS` | `2048` | the most texts of one `embed` |
 

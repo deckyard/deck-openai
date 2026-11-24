@@ -20,7 +20,7 @@ $req = json.set($req, "/max_completion_tokens", 200);
 `withSystem` sets the instructions: a `system` message at the start,
 replacing a first `system` or `developer` message already there.
 `addUserText` adds a user message. `addMessage` takes any of the roles
-`system`, `developer`, `user` and `assistant`. `developer` is OpenAI's
+`system`, `developer`, `user` and `assistant`. `developer` is OpenAI™'s
 newer name for `system`, which its reference recommends for o1 and newer
 models; `withSystem` writes `system` because every OpenAI-compatible
 server knows it, while a local server may refuse `developer`. For OpenAI's
@@ -56,7 +56,7 @@ $req = json.append($req, "/messages", $msg);
 
 | Reader | Returns |
 |---|---|
-| `text(reply)` | the text of the first choice; `""` when the model only called tools or refused. Content sent as a list of parts (Mistral) is joined from its `text` parts |
+| `text(reply)` | the text of the first choice; `""` when the model only called tools or refused. Content sent as a list of parts (Mistral™) is joined from its `text` parts |
 | `refusal(reply)` | why the model refused, `""` when it did not |
 | `finishReason(reply)` | `stop`, `length`, `tool_calls`, `content_filter` |
 | `toolCalls(reply)` | the tool calls, a `list of ToolCall` |
@@ -117,5 +117,5 @@ text is not JSON. The older JSON mode (`response_format` of type
 guarantees JSON but no schema. The `jsonschema` deck can check a parsed
 reply against the schema where a server does not enforce it.
 
-Ollama 0.40.16 follows a strict `json_schema` (checked live); other local
+Ollama™ 0.40.16 follows a strict `json_schema` (checked live); other local
 servers differ in which schema features they enforce.

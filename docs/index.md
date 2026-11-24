@@ -3,13 +3,13 @@
 
 # @deckyard/openai
 
-A client for the OpenAI-compatible API, written in Jennifer over plain
+A client for the OpenAI™-compatible API, written in Jennifer over plain
 HTTPS: Chat Completions with tools and structured output, a tool loop that
 runs the model's tool calls through a function of yours, embeddings and
 model listing, and `call` for every other endpoint. The base URL is
-settable, so one client covers OpenAI, Azure OpenAI and the servers that
-speak the same API: Ollama, vLLM, the llama.cpp server, LM Studio,
-OpenRouter, Groq, Mistral, Together, Google's OpenAI-compatible Gemini
+settable, so one client covers OpenAI, Azure™ OpenAI and the servers that
+speak the same API: Ollama™, vLLM™, the llama.cpp™ server, LM Studio™,
+OpenRouter™, Groq™, Mistral™, Together™, Google™'s OpenAI-compatible Gemini™
 endpoint.
 
 - [Chat](chat.md): requests, messages, replies, structured output,
@@ -70,7 +70,7 @@ def dated as openai.Client init openai.azureVersioned("https://myres.openai.azur
     os.getEnv("AZURE_OPENAI_API_KEY"), openai.AZURE_API_VERSION);
 ```
 
-A Microsoft Entra ID token instead of a key goes as a bearer token:
+A Microsoft™ Entra™ ID token instead of a key goes as a bearer token:
 `openai.withBaseUrl(openai.client($token), $endpoint + "/openai/v1")`. See
 [Servers](servers.md) for each server's base URL and quirks.
 
@@ -182,3 +182,14 @@ after a long generation may still be billed.
 - Files, batches, fine-tuning, images, audio, moderation, vector stores and
   the Realtime API (WebSocket) have no helpers; the JSON ones work through
   `call`. Uploads (`multipart/form-data`) do not.
+
+## Trademarks
+
+OpenAI™ is a trademark of OpenAI Foundation. Azure™ and Microsoft Entra™ are
+trademarks of Microsoft Corporation. Gemini™ is a trademark of Google LLC.
+Groq™ is a trademark of Groq, Inc. Ollama™ is a trademark of Ollama Inc.
+OpenRouter™ is a trademark of OpenRouter, Inc. LM Studio™ is a trademark of
+Element Labs Inc. Other product and company names may be trademarks of their
+respective owners. They are used only to identify the products this deck
+works with. This deck is an independent project, not affiliated with,
+sponsored or endorsed by OpenAI Foundation or any other provider named here.

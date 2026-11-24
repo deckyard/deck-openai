@@ -18,12 +18,12 @@ io.printf("%d vectors of %d floats\n", len($vs), len($vs[0]));
 ```
 
 It takes 1 to `MAX_INPUTS` (2048) texts, none empty, and checks that the
-reply holds exactly one vector for each. OpenAI also caps a request at
+reply holds exactly one vector for each. OpenAI™ also caps a request at
 300 000 tokens across its inputs and 8192 per input; split larger batches.
 
 The vectors travel as base64 of 32-bit floats (`encoding_format`:
 `base64`), a third of the size of JSON numbers and read in one call
-instead of one per number. OpenAI documents it and Ollama honours it
+instead of one per number. OpenAI documents it and Ollama™ honours it
 (checked live); a server that ignores the field and sends numbers is read
 as well. OpenAI's vectors have length 1, so the cosine similarity of two
 is their dot product; other models' may not, so `examples/embeddings.j`
