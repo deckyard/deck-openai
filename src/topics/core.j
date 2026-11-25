@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: LGPL-3.0-only
 # SPDX-FileCopyrightText: Copyright (C) 2026 mplx <mplx@jennifer-lang.dev>
-# pragma-jennifer-version: >=0.27.0
+# pragma-jennifer-version: >=0.28.0
 
 # openai - core: the client and its settings, Azure, the HTTP exchange with
 # its deadline, cap and retries, errors, JSON readers, `models` and `call`.
@@ -633,7 +633,12 @@ func exchange(c as Client, method as string, url as string, body as string, what
     def maxBytes as int init $c.maxBytes;
     def tls as http.TlsOptions init $c.tls;
     def t as task of http.BytesResponse init spawn {
-        return http.requestWithBytes($method, $url, $headers, $body, $timeoutMs, $maxBytes, $tls);
+        return http.sendBytes(
+            $method,
+            $url,
+            $headers,
+            encoding.encode("utf-8", $body),
+            httpOptions($timeoutMs, $maxBytes, $tls));
     };
     def none as http.BytesResponse;
     def noError as net.NetError;
@@ -824,7 +829,7 @@ func waitOf(value as string, unit as int) {
     if ($ms > convert.toFloat(MAX_NAMED_WAIT_MS)) {
         return MAX_NAMED_WAIT_MS;
     }
-    return convert.toInt($ms);
+    return math.trunc($ms);
 }
 
 /**
@@ -841,14 +846,14 @@ func dateWait(value as string) {
     }
     def at as int init 0;
     try {
-        $at = time.unixMillis(time.parse($value[..len($value) - 4], "%a, %d %b %Y %H:%M:%S"));
+        $at = time.unixMilliseconds(time.parse($value[..len($value) - 4], "%a, %d %b %Y %H:%M:%S"));
     } catch (e) {
         if (lists.contains(GENERIC_KINDS, $e.kind)) {
             throw $e;
         }
         return -1;
     }
-    def wait as int init $at - time.unixMillis(time.now());
+    def wait as int init $at - time.unixMilliseconds(time.now());
     if ($wait < 0) {
         return 0;
     }
@@ -1163,4 +1168,21 @@ export func call(c as Client, method as string, path as string, body as json.Val
         $text = json.encode($body);
     }
     return send($c, $method, urlOf($c, $path, ""), $text, "call " + $method + " " + shown($path));
+}
+
+# httpOptions is the http.Options a positional timeout, body cap and TLS
+# setting stand for: a timeout of 0 means no idle timeout, as it did for the
+# positional calls.
+func httpOptions(timeoutMs as int, maxBytes as int, tls as http.TlsOptions) {
+    def o as http.Options;
+    $o.timeoutMs = $timeoutMs;
+    if ($timeoutMs == 0) {
+        $o.timeoutMs = math.MAX_INT;
+    }
+    $o.maxBytes = $maxBytes;
+    def t as net.TLSOptions;
+    $t.skipVerify = $tls.skipVerify;
+    $t.caCert = $tls.caCert;
+    $o.tlsOptions = $t;
+    return $o;
 }

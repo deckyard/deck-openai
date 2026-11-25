@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: LGPL-3.0-only
 # SPDX-FileCopyrightText: Copyright (C) 2026 mplx <mplx@jennifer-lang.dev>
-# pragma-jennifer-version: >=0.27.0
+# pragma-jennifer-version: >=0.28.0
 
 # openai - white-box tests for the core topic, and the fake server the other
 # overlays use. Spliced into openai_test.j via include.
@@ -573,7 +573,7 @@ func testARefusedConnectionIsRetried() {
     def addr as string init net.address($l);
     net.close($l);
     def c as Client init withRetries(withBaseUrl(client(""), "http://" + $addr + "/v1"), 1);
-    def start as int init time.unixMillis(time.now());
+    def start as int init time.unixMilliseconds(time.now());
     try {
         models($c);
         missed("a closed port");
@@ -584,7 +584,7 @@ func testARefusedConnectionIsRetried() {
         testing.assertFalse($ne.sent);
     }
     # one retry after the first backoff, 500 ms
-    testing.assertTrue(time.unixMillis(time.now()) - $start >= 450);
+    testing.assertTrue(time.unixMilliseconds(time.now()) - $start >= 450);
 }
 
 /**

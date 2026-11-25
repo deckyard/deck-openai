@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: LGPL-3.0-only
 # SPDX-FileCopyrightText: Copyright (C) 2026 mplx <mplx@jennifer-lang.dev>
-# pragma-jennifer-version: >=0.27.0
+# pragma-jennifer-version: >=0.28.0
 
 # openai - recorded replies for the overlays: from OpenAI's API reference
 # (the openai-openapi spec, 2026-11-14) and from a live Ollama 0.40.16 with

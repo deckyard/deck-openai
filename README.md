@@ -44,7 +44,7 @@ def local as openai.Client init openai.withBaseUrl(openai.client(""), "http://12
 
 ## Requirements
 
-Jennifer 0.27.0 or newer, the default binary: the deck opens sockets
+Jennifer 0.28.0 or newer, the default binary: the deck opens sockets
 (capability `net`), which `jennifer-tiny` does not have. An API key for a
 hosted service, or a local OpenAI-compatible server. No streaming yet.
 
